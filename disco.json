@@ -2,7 +2,13 @@
     "version": "1.0",
     "services": {
         "web": {
-            "port": 8000
+            "port": 8000,
+            "volumes": [
+                {
+                    "name": "audio",
+                    "destinationPath": "/audio"
+                }
+            ]
         }
     }
 }
