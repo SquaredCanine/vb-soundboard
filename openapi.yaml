@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: VB Soundboard API
+  version: 1.0.0
+paths:
+  /audio:
+    get:
+      summary: List audio files
+      operationId: listAudio
+      responses:
+        '200':
+          description: Audio files grouped by type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioLibrary'
+  /audio/{id}:
+    get:
+      summary: Stream an audio file
+      operationId: getAudioFile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audio file
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Audio file not found
+components:
+  schemas:
+    AudioFile:
+      type: object
+      required:
+        - id
+        - name
+        - url
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+    AudioLibrary:
+      type: object
+      required:
+        - songs
+        - bits
+      properties:
+        songs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AudioFile'
+        bits:
+          type: array
+          items:
+            $ref: '#/components/schemas/AudioFile'
