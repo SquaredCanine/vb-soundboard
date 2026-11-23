@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 AUDIO_ROOT = Path(__file__).parent / "audio"
+
 CATEGORIES = ["songs", "bits"]
 
 app = FastAPI(title="VB Soundboard API", version="1.0.0")
@@ -37,12 +38,22 @@ def to_audio_file(category: str, file: Path) -> AudioFile:
     return AudioFile(id=audio_id, name=file.stem, url=f"/audio/{audio_id}")
 
 
+def build_library() -> tuple[AudioLibrary, dict[str, Path]]:
+    library = AudioLibrary(songs=[], bits=[])
+    paths_by_id: dict[str, Path] = {}
+    for category in CATEGORIES:
+        for file in find_mp3_files(category):
+            audio_file = to_audio_file(category, file)
+            getattr(library, category).append(audio_file)
+            paths_by_id[audio_file.id] = file
+    return library, paths_by_id
+
+LIBRARY, PATHS_BY_ID = build_library()
+
+
 @app.get("/audio", response_model=AudioLibrary, operation_id="listAudio")
 def list_audio():
-    return AudioLibrary(
-        songs=[to_audio_file("songs", file) for file in find_mp3_files("songs")],
-        bits=[to_audio_file("bits", file) for file in find_mp3_files("bits")],
-    )
+    return LIBRARY
 
 
 @app.get(
@@ -52,9 +63,7 @@ def list_audio():
     responses={200: {"content": {"audio/mpeg": {}}}, 404: {"description": "Audio file not found"}},
 )
 def get_audio_file(id: str):
-    # Only files found by scanning the folders can be returned, so the id can't point outside AUDIO_ROOT
-    for category in CATEGORIES:
-        for file in find_mp3_files(category):
-            if make_id(category, file) == id:
-                return FileResponse(file, media_type="audio/mpeg")
-    raise HTTPException(status_code=404, detail="Audio file not found")
+    file = PATHS_BY_ID.get(id)
+    if file is None:
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    return FileResponse(file, media_type="audio/mpeg")
