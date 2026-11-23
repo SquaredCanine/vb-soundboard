@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 AUDIO_ROOT = Path(__file__).parent / "audio"
+INDEX_PAGE = Path(__file__).parent / "static" / "index.html"
 
 CATEGORIES = ["songs", "bits"]
 
@@ -49,6 +50,11 @@ def build_library() -> tuple[AudioLibrary, dict[str, Path]]:
     return library, paths_by_id
 
 LIBRARY, PATHS_BY_ID = build_library()
+
+@app.get("/", include_in_schema=False)
+def soundboard_page():
+    return FileResponse(INDEX_PAGE)
+
 
 @app.get("/audio", response_model=AudioLibrary, operation_id="listAudio")
 def list_audio():
