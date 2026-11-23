@@ -117,6 +117,7 @@
     const songPlayer = new Audio();
     const bitPlayer = new Audio();
     let songs = [];
+    let currentBitId = null;
 
     const playButton = document.getElementById("play");
     const pauseButton = document.getElementById("pause");
@@ -202,6 +203,13 @@
         const button = document.createElement("button");
         button.textContent = bit.name;
         button.addEventListener("click", () => {
+          const isThisBitPlaying = currentBitId === bit.id && !bitPlayer.paused;
+          if (isThisBitPlaying) {
+            bitPlayer.pause();
+            bitPlayer.currentTime = 0;
+            return;
+          }
+          currentBitId = bit.id;
           bitPlayer.src = audioUrl(bit);
           bitPlayer.play();
         });
