@@ -75,6 +75,15 @@
     }
     #progress[hidden] { display: none; }
     #seek-bar { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    .fade-setting {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    #fade-slider { flex: 1; max-width: 200px; accent-color: var(--accent); }
     #bits {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -105,6 +114,11 @@
           <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
         </button>
       </div>
+      <label class="fade-setting">
+        Pause fade-out
+        <input id="fade-slider" type="range" min="0" max="5" step="0.5" value="2">
+        <span id="fade-label">2s</span>
+      </label>
     </section>
 
     <section>
@@ -129,10 +143,47 @@
       return "/audio/" + encodeURIComponent(file.id);
     }
 
+    const fadeSlider = document.getElementById("fade-slider");
+    const fadeLabel = document.getElementById("fade-label");
+    let fadeTimer = null;
+
+    fadeSlider.addEventListener("input", () => {
+      fadeLabel.textContent = fadeSlider.value + "s";
+    });
+
+    function isFading() {
+      return fadeTimer !== null;
+    }
+
+    function cancelFade() {
+      clearInterval(fadeTimer);
+      fadeTimer = null;
+      songPlayer.volume = 1;
+    }
+
+    function fadeOutAndPause() {
+      const fadeMs = fadeSlider.value * 1000;
+      if (fadeMs === 0) {
+        songPlayer.pause();
+        return;
+      }
+
+      const stepMs = 50;
+      const volumeStep = stepMs / fadeMs;
+      fadeTimer = setInterval(() => {
+        songPlayer.volume = Math.max(0, songPlayer.volume - volumeStep);
+        if (songPlayer.volume === 0) {
+          songPlayer.pause();
+          cancelFade();
+        }
+      }, stepMs);
+      updateButtons();
+    }
+
     function updateButtons() {
       const hasSong = songPlayer.src !== "";
-      playButton.disabled = !songPlayer.paused;
-      pauseButton.disabled = songPlayer.paused;
+      playButton.disabled = !songPlayer.paused && !isFading();
+      pauseButton.disabled = songPlayer.paused || isFading();
       stopButton.disabled = !hasSong;
     }
 
@@ -144,6 +195,7 @@
     }
 
     function stopSong() {
+      cancelFade();
       songPlayer.pause();
       songPlayer.removeAttribute("src");
       songPlayer.load();
@@ -152,6 +204,11 @@
     }
 
     playButton.addEventListener("click", () => {
+      if (isFading()) {
+        cancelFade();
+        updateButtons();
+        return;
+      }
       const isPausedMidSong = songPlayer.src !== "";
       if (isPausedMidSong) {
         songPlayer.play();
@@ -159,7 +216,7 @@
         playRandomSong();
       }
     });
-    pauseButton.addEventListener("click", () => songPlayer.pause());
+    pauseButton.addEventListener("click", fadeOutAndPause);
     stopButton.addEventListener("click", stopSong);
 
     songPlayer.addEventListener("play", updateButtons);
