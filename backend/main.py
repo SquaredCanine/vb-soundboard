@@ -1,11 +1,10 @@
-import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-AUDIO_ROOT = Path(os.environ.get("AUDIO_ROOT", "/audio"))
+AUDIO_ROOT = Path(__file__).parent / "audio"
 
 CATEGORIES = ["songs", "bits"]
 
@@ -49,11 +48,11 @@ def build_library() -> tuple[AudioLibrary, dict[str, Path]]:
             paths_by_id[audio_file.id] = file
     return library, paths_by_id
 
+LIBRARY, PATHS_BY_ID = build_library()
 
 @app.get("/audio", response_model=AudioLibrary, operation_id="listAudio")
 def list_audio():
-    library, _ = build_library()
-    return library
+    return LIBRARY
 
 
 @app.get(
@@ -63,8 +62,7 @@ def list_audio():
     responses={200: {"content": {"audio/mpeg": {}}}, 404: {"description": "Audio file not found"}},
 )
 def get_audio_file(id: str):
-    _, paths_by_id = build_library()
-    file = paths_by_id.get(id)
+    file = PATHS_BY_ID.get(id)
     if file is None:
         raise HTTPException(status_code=404, detail="Audio file not found")
     return FileResponse(file, media_type="audio/mpeg")
