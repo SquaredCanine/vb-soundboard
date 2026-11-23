@@ -55,7 +55,26 @@
     }
     button:hover { border-color: var(--accent); }
     button:disabled { opacity: 0.4; cursor: default; }
+    button.icon {
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+    }
+    button.icon svg { width: 24px; height: 24px; fill: currentColor; }
     button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+    #progress {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    #progress[hidden] { display: none; }
+    #seek-bar { flex: 1; accent-color: var(--accent); cursor: pointer; }
     #bits {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -70,10 +89,21 @@
     <section>
       <h2>Songs</h2>
       <p id="now-playing">Press play for a random song</p>
+      <div id="progress" hidden>
+        <span id="current-time">0:00</span>
+        <input id="seek-bar" type="range" min="0" value="0" step="0.1" aria-label="Song position">
+        <span id="duration">0:00</span>
+      </div>
       <div class="controls">
-        <button id="play" class="primary">Play</button>
-        <button id="pause" disabled>Pause</button>
-        <button id="stop" disabled>Stop</button>
+        <button id="play" class="primary icon" aria-label="Play">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button id="pause" class="icon" aria-label="Pause" disabled>
+          <svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <button id="stop" class="icon" aria-label="Stop" disabled>
+          <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+        </button>
       </div>
     </section>
 
@@ -134,6 +164,38 @@
     songPlayer.addEventListener("play", updateButtons);
     songPlayer.addEventListener("pause", updateButtons);
     songPlayer.addEventListener("ended", stopSong);
+
+    const progress = document.getElementById("progress");
+    const seekBar = document.getElementById("seek-bar");
+    const currentTimeLabel = document.getElementById("current-time");
+    const durationLabel = document.getElementById("duration");
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, "0");
+      return minutes + ":" + remainingSeconds;
+    }
+
+    songPlayer.addEventListener("loadedmetadata", () => {
+      seekBar.max = songPlayer.duration;
+      durationLabel.textContent = formatTime(songPlayer.duration);
+      progress.hidden = false;
+    });
+
+    songPlayer.addEventListener("timeupdate", () => {
+      seekBar.value = songPlayer.currentTime;
+      currentTimeLabel.textContent = formatTime(songPlayer.currentTime);
+    });
+
+    seekBar.addEventListener("input", () => {
+      songPlayer.currentTime = seekBar.value;
+    });
+
+    songPlayer.addEventListener("emptied", () => {
+      progress.hidden = true;
+      seekBar.value = 0;
+      currentTimeLabel.textContent = "0:00";
+    });
 
     function showBits(bits) {
       for (const bit of bits) {
